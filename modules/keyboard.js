@@ -448,7 +448,7 @@ Keyboard.DEFAULTS = {
 };
 
 function handleBackspace(range, context) {
-  if (range.index === 0 || this.quill.getLength() <= 1) return;
+  if (range.index === 0 || this.quill.getLength() <= 1) return true;
   const [line] = this.quill.getLine(range.index);
   let formats = {};
   if (context.offset === 0) {
