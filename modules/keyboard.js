@@ -473,6 +473,7 @@ function handleBackspace(range, context) {
     );
   }
   this.quill.focus();
+  return undefined;
 }
 
 function handleDelete(range, context) {

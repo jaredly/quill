@@ -77,11 +77,14 @@ class Clipboard extends Module {
     this.matchers.push([selector, matcher]);
   }
 
-  convert({ html, text }, formats = {}) {
+  convert({ html, text, delta: pastedDelta }, formats = {}) {
     if (formats[CodeBlock.blotName]) {
       return new Delta().insert(text, {
         [CodeBlock.blotName]: formats[CodeBlock.blotName],
       });
+    }
+    if (pastedDelta) {
+      return pastedDelta;
     }
     if (!html) {
       return new Delta().insert(text || '');
@@ -130,9 +133,10 @@ class Clipboard extends Module {
     e.preventDefault();
     const [range] = this.quill.selection.getRange();
     if (range == null) return;
-    const { html, text } = this.onCopy(range, isCut);
+    const { html, text, delta } = this.onCopy(range, isCut);
     e.clipboardData.setData('text/plain', text);
     e.clipboardData.setData('text/html', html);
+    e.clipboardData.setData('application/x-delta', JSON.stringify(delta));
     if (isCut) {
       this.quill.deleteText(range, Quill.sources.USER);
     }
@@ -145,24 +149,32 @@ class Clipboard extends Module {
     if (range == null) return;
     const html = e.clipboardData.getData('text/html');
     const text = e.clipboardData.getData('text/plain');
+    const deltaRaw = e.clipboardData.getData('application/x-delta');
+    let delta = null;
+    try {
+      delta = JSON.parse(deltaRaw);
+    } catch (error) {
+      // invalid delta, ignoring
+    }
     const files = Array.from(e.clipboardData.files || []);
-    if (!html && files.length > 0) {
+    if (!html && !delta && files.length > 0) {
       this.quill.uploader.upload(range, files);
     } else {
-      this.onPaste(range, { html, text });
+      this.onPaste(range, { html, text, delta });
     }
   }
 
   onCopy(range) {
     const text = this.quill.getText(range);
     const html = this.quill.getSemanticHTML(range);
-    return { html, text };
+    const delta = this.quill.getContents(range);
+    return { html, text, delta };
   }
 
-  onPaste(range, { text, html }) {
+  onPaste(range, data) {
     const formats = this.quill.getFormat(range.index);
-    const pastedDelta = this.convert({ text, html }, formats);
-    debug.log('onPaste', pastedDelta, { text, html });
+    const pastedDelta = this.convert(data, formats);
+    debug.log('onPaste', pastedDelta, data);
     const delta = new Delta()
       .retain(range.index)
       .delete(range.length)
