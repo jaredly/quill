@@ -11261,4 +11261,4 @@ exports.default = SnowTheme;
 /***/ })
 /******/ ])["default"];
 });
-//# sourceMappingURL=quill.min.js.map
+//# sourceMappingURL=quill.prod.js.map
